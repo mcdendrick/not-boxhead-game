@@ -7,6 +7,6 @@ export class AssaultRifle extends Weapon {
   }
   
   protected getShootSoundName(): string {
-    return 'rifleShot';
+    return 'assaultRifleShot';
   }
 } 

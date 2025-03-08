@@ -14,7 +14,7 @@ export class BossZombie extends Enemy {
     // Override default values - much stronger than regular zombies
     this.health = 500;
     this.maxHealth = 500;
-    this.damage = 25;
+    this.damage = 15;
     this.speed = 1.5; // Slower but more powerful
     this.scoreValue = 1000;
   }

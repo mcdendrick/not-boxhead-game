@@ -10,7 +10,7 @@ export class FastZombie extends Enemy {
     // Override default values - faster but weaker
     this.health = 60;
     this.maxHealth = 60;
-    this.damage = 5;
+    this.damage = 3;
     this.speed = 3.0; // Faster than basic zombie
     this.scoreValue = 150;
   }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { Weapon } from '../weapons/Weapon';
 import { Pistol } from '../weapons/Pistol';
@@ -8,6 +8,7 @@ import { AssaultRifle } from '../weapons/AssaultRifle';
 import { RocketLauncher } from '../weapons/RocketLauncher';
 import { Minigun } from '../weapons/Minigun';
 import { WeaponManager } from '../weapons/WeaponManager';
+import * as CANNON from 'cannon-es';
 
 export class Player {
   private controls: PointerLockControls;
@@ -28,6 +29,11 @@ export class Player {
   private health: number = 100;
   private maxHealth: number = 100;
   
+  // Damage cooldown system
+  private invulnerable: boolean = false;
+  private invulnerabilityTimer: number = 0;
+  private readonly INVULNERABILITY_DURATION: number = 1.5; // Increased from 1.0 to 1.5 seconds
+  
   private weapons: Weapon[] = [];
   private currentWeaponIndex: number = 0;
   private isShooting: boolean = false;
@@ -42,16 +48,39 @@ export class Player {
   private readonly SPRINT_SPEED: number = 8.0;
   private readonly JUMP_FORCE: number = 1.0; // Reduced to prevent extremely high jumps
   
+  // Collision detection
+  private collisionObjects: CANNON.Body[] = [];
+  
   constructor(controls: PointerLockControls, camera: THREE.PerspectiveCamera, physicsWorld: PhysicsWorld) {
     this.controls = controls;
     this.camera = camera;
     this.physicsWorld = physicsWorld;
     
     // Set initial position
+    this.position.set(0, this.PLAYER_HEIGHT, 0);
     this.controls.getObject().position.copy(this.position);
+    
+    // Ensure camera is at the correct height
+    this.camera.position.y = this.PLAYER_HEIGHT;
     
     // Initialize weapons
     this.initializeWeapons();
+    
+    // Get all static bodies from the physics world for collision detection
+    this.updateCollisionObjects();
+  }
+  
+  public updateCollisionObjects(): void {
+    // Get all bodies from the physics world
+    const world = this.physicsWorld.getWorld();
+    this.collisionObjects = [];
+    
+    // Add all static bodies to collision objects
+    world.bodies.forEach(body => {
+      if (body.mass === 0) { // Static bodies have mass of 0
+        this.collisionObjects.push(body);
+      }
+    });
   }
   
   private initializeWeapons(): void {
@@ -110,7 +139,10 @@ export class Player {
     }
     
     // Apply gravity
-    this.velocity.y -= 7.5 * deltaTime; // Increased to match physics world gravity
+    this.velocity.y -= 9.8 * deltaTime;
+    
+    // Store current position before movement
+    const previousPosition = this.controls.getObject().position.clone();
     
     // Update position
     this.controls.getObject().position.x += this.velocity.x;
@@ -124,6 +156,9 @@ export class Player {
       this.canJump = true;
     }
     
+    // Check for wall collisions
+    this.checkWallCollisions(previousPosition);
+    
     // Update current weapon
     if (this.isShooting) {
       this.shoot();
@@ -131,6 +166,92 @@ export class Player {
     
     // Update position for collision detection
     this.position.copy(this.controls.getObject().position);
+    
+    // Update invulnerability timer
+    if (this.invulnerable) {
+      this.invulnerabilityTimer -= deltaTime;
+      if (this.invulnerabilityTimer <= 0) {
+        this.invulnerable = false;
+      }
+    }
+  }
+  
+  private checkWallCollisions(previousPosition: THREE.Vector3): void {
+    // Simple collision detection with walls and obstacles
+    const playerPosition = this.controls.getObject().position.clone();
+    
+    // Check each collision object
+    for (const body of this.collisionObjects) {
+      // Skip non-box shapes for simplicity
+      if (!body.shapes[0] || !(body.shapes[0] instanceof CANNON.Box)) continue;
+      
+      const boxShape = body.shapes[0] as CANNON.Box;
+      const halfExtents = boxShape.halfExtents;
+      
+      // Get the world position and rotation of the body
+      const bodyPosition = body.position;
+      const bodyQuaternion = body.quaternion;
+      
+      // Create a box3 for the obstacle
+      const boxMin = new THREE.Vector3(
+        bodyPosition.x - halfExtents.x,
+        bodyPosition.y - halfExtents.y,
+        bodyPosition.z - halfExtents.z
+      );
+      
+      const boxMax = new THREE.Vector3(
+        bodyPosition.x + halfExtents.x,
+        bodyPosition.y + halfExtents.y,
+        bodyPosition.z + halfExtents.z
+      );
+      
+      // Check if player is colliding with the box
+      if (this.isCollidingWithBox(playerPosition, boxMin, boxMax)) {
+        // Handle collision by reverting to previous position
+        // But only in the X and Z directions to allow jumping
+        this.controls.getObject().position.x = previousPosition.x;
+        this.controls.getObject().position.z = previousPosition.z;
+        
+        // Add a small push-back effect to prevent getting stuck
+        const pushDirection = new THREE.Vector3(
+          playerPosition.x - bodyPosition.x,
+          0,
+          playerPosition.z - bodyPosition.z
+        ).normalize();
+        
+        // Apply a small push in the direction away from the obstacle
+        this.controls.getObject().position.x += pushDirection.x * 0.1;
+        this.controls.getObject().position.z += pushDirection.z * 0.1;
+        
+        break;
+      }
+    }
+  }
+  
+  private isCollidingWithBox(playerPos: THREE.Vector3, boxMin: THREE.Vector3, boxMax: THREE.Vector3): boolean {
+    // Check if player's bounding cylinder intersects with the box
+    // For simplicity, we'll use a cylinder approximation (just check a circle in the XZ plane)
+    
+    // First, check if player's Y position is within the box's Y range (with some margin for the player height)
+    const playerBottom = playerPos.y - this.PLAYER_HEIGHT / 2;
+    const playerTop = playerPos.y + this.PLAYER_HEIGHT / 2;
+    
+    if (playerTop < boxMin.y || playerBottom > boxMax.y) {
+      return false; // No collision in Y axis
+    }
+    
+    // Now check XZ plane using circle vs. rectangle collision
+    // Find the closest point on the rectangle to the circle center
+    const closestX = Math.max(boxMin.x, Math.min(playerPos.x, boxMax.x));
+    const closestZ = Math.max(boxMin.z, Math.min(playerPos.z, boxMax.z));
+    
+    // Calculate distance from closest point to circle center
+    const distanceX = playerPos.x - closestX;
+    const distanceZ = playerPos.z - closestZ;
+    const distanceSquared = distanceX * distanceX + distanceZ * distanceZ;
+    
+    // Check if distance is less than player radius
+    return distanceSquared < (this.PLAYER_RADIUS * this.PLAYER_RADIUS);
   }
   
   public setMovement(forward: boolean, backward: boolean, left: boolean, right: boolean, jump: boolean, sprint: boolean): void {
@@ -247,11 +368,7 @@ export class Player {
   public unlockWeapon(index: number): void {
     if (index >= 0 && index < this.unlockedWeapons.length) {
       this.unlockedWeapons[index] = true;
-      
-      // Reset the weapon to ensure it has full ammo when unlocked
-      if (index < this.weapons.length) {
-        this.weapons[index].reset();
-      }
+      console.log(`Unlocked weapon ${index}: ${this.weapons[index].getName()}`);
     }
   }
   
@@ -260,17 +377,21 @@ export class Player {
   }
   
   public takeDamage(amount: number): void {
-    this.health -= amount;
-    if (this.health < 0) {
-      this.health = 0;
-    }
+    // Skip damage if player is invulnerable
+    if (this.invulnerable) return;
+    
+    // Apply damage
+    this.health = Math.max(0, this.health - amount);
+    console.log(`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
+    
+    // Make player invulnerable for a short time
+    this.invulnerable = true;
+    this.invulnerabilityTimer = this.INVULNERABILITY_DURATION;
   }
   
   public heal(amount: number): void {
-    this.health += amount;
-    if (this.health > this.maxHealth) {
-      this.health = this.maxHealth;
-    }
+    this.health = Math.min(this.maxHealth, this.health + amount);
+    console.log(`Player healed ${amount} health. Health: ${this.health}/${this.maxHealth}`);
   }
   
   public getHealth(): number {
@@ -290,8 +411,8 @@ export class Player {
   }
   
   public reset(): void {
-    // Reset position
-    this.position.set(0, 2, 0);
+    // Reset player position
+    this.position.set(0, this.PLAYER_HEIGHT, 0);
     this.controls.getObject().position.copy(this.position);
     
     // Reset velocity
@@ -299,6 +420,10 @@ export class Player {
     
     // Reset health
     this.health = this.maxHealth;
+    
+    // Reset invulnerability
+    this.invulnerable = false;
+    this.invulnerabilityTimer = 0;
     
     // Reset weapons
     this.weapons.forEach(weapon => weapon.reset());
@@ -315,5 +440,12 @@ export class Player {
     this.isSprinting = false;
     this.canJump = true;
     this.isShooting = false;
+    
+    // Update collision objects
+    this.updateCollisionObjects();
+  }
+  
+  public isInvulnerable(): boolean {
+    return this.invulnerable;
   }
 } 

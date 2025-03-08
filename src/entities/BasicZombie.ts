@@ -9,7 +9,7 @@ export class BasicZombie extends Enemy {
     // Override default values
     this.health = 100;
     this.maxHealth = 100;
-    this.damage = 10;
+    this.damage = 5;
     this.speed = 2.0;
     this.scoreValue = 100;
   }

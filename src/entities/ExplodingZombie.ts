@@ -5,8 +5,8 @@ import { PhysicsWorld } from '../physics/PhysicsWorld';
 
 export class ExplodingZombie extends Enemy {
   private explosionRadius: number = 5;
-  private explosionDamage: number = 50;
-  private isExploding: boolean = false;
+  private explosionDamage: number = 30;
+  public isExploding: boolean = false;
   private explosionTimer: number | null = null;
   
   constructor(scene: THREE.Scene, physicsWorld: PhysicsWorld, position: THREE.Vector3) {

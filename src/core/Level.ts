@@ -35,10 +35,11 @@ export class Level {
   }
   
   private createWalls(): void {
-    // Create walls around the perimeter
+    // Create walls around the perimeter with openings
     const wallHeight = 5;
     const wallThickness = 1;
     const arenaSize = 50;
+    const gapSize = 10; // Size of the opening in each wall
     
     // Materials
     const wallMaterial = new THREE.MeshStandardMaterial({ 
@@ -47,69 +48,101 @@ export class Level {
       metalness: 0.3
     });
     
-    // North wall
-    const northWallGeometry = new THREE.BoxGeometry(arenaSize, wallHeight, wallThickness);
-    const northWall = new THREE.Mesh(northWallGeometry, wallMaterial);
-    northWall.position.set(0, wallHeight / 2, -arenaSize / 2);
-    northWall.receiveShadow = true;
-    northWall.castShadow = true;
-    this.scene.add(northWall);
-    this.walls.push(northWall);
+    // Create wall segments with gaps
+    this.createWallSegments('north', wallMaterial, arenaSize, wallHeight, wallThickness, gapSize);
+    this.createWallSegments('south', wallMaterial, arenaSize, wallHeight, wallThickness, gapSize);
+    this.createWallSegments('east', wallMaterial, arenaSize, wallHeight, wallThickness, gapSize);
+    this.createWallSegments('west', wallMaterial, arenaSize, wallHeight, wallThickness, gapSize);
+  }
+  
+  private createWallSegments(side: string, material: THREE.Material, arenaSize: number, wallHeight: number, wallThickness: number, gapSize: number): void {
+    const halfArenaSize = arenaSize / 2;
+    const segmentSize = (arenaSize - gapSize) / 2;
     
-    // Add physics body for north wall
-    this.physicsWorld.addBox(
-      new THREE.Vector3(arenaSize, wallHeight, wallThickness),
-      northWall.position,
-      0 // Static body
-    );
+    let wallGeometry: THREE.BoxGeometry;
+    let wallSegment1: THREE.Mesh = new THREE.Mesh();
+    let wallSegment2: THREE.Mesh = new THREE.Mesh();
     
-    // South wall
-    const southWallGeometry = new THREE.BoxGeometry(arenaSize, wallHeight, wallThickness);
-    const southWall = new THREE.Mesh(southWallGeometry, wallMaterial);
-    southWall.position.set(0, wallHeight / 2, arenaSize / 2);
-    southWall.receiveShadow = true;
-    southWall.castShadow = true;
-    this.scene.add(southWall);
-    this.walls.push(southWall);
+    switch(side) {
+      case 'north':
+        // North wall segments (left and right of the gap)
+        wallGeometry = new THREE.BoxGeometry(segmentSize, wallHeight, wallThickness);
+        
+        // Left segment
+        wallSegment1 = new THREE.Mesh(wallGeometry, material);
+        wallSegment1.position.set(-halfArenaSize + segmentSize/2, wallHeight/2, -halfArenaSize);
+        
+        // Right segment
+        wallSegment2 = new THREE.Mesh(wallGeometry, material);
+        wallSegment2.position.set(halfArenaSize - segmentSize/2, wallHeight/2, -halfArenaSize);
+        
+        break;
+        
+      case 'south':
+        // South wall segments
+        wallGeometry = new THREE.BoxGeometry(segmentSize, wallHeight, wallThickness);
+        
+        // Left segment
+        wallSegment1 = new THREE.Mesh(wallGeometry, material);
+        wallSegment1.position.set(-halfArenaSize + segmentSize/2, wallHeight/2, halfArenaSize);
+        
+        // Right segment
+        wallSegment2 = new THREE.Mesh(wallGeometry, material);
+        wallSegment2.position.set(halfArenaSize - segmentSize/2, wallHeight/2, halfArenaSize);
+        
+        break;
+        
+      case 'east':
+        // East wall segments
+        wallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, segmentSize);
+        
+        // Front segment
+        wallSegment1 = new THREE.Mesh(wallGeometry, material);
+        wallSegment1.position.set(halfArenaSize, wallHeight/2, -halfArenaSize + segmentSize/2);
+        
+        // Back segment
+        wallSegment2 = new THREE.Mesh(wallGeometry, material);
+        wallSegment2.position.set(halfArenaSize, wallHeight/2, halfArenaSize - segmentSize/2);
+        
+        break;
+        
+      case 'west':
+        // West wall segments
+        wallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, segmentSize);
+        
+        // Front segment
+        wallSegment1 = new THREE.Mesh(wallGeometry, material);
+        wallSegment1.position.set(-halfArenaSize, wallHeight/2, -halfArenaSize + segmentSize/2);
+        
+        // Back segment
+        wallSegment2 = new THREE.Mesh(wallGeometry, material);
+        wallSegment2.position.set(-halfArenaSize, wallHeight/2, halfArenaSize - segmentSize/2);
+        
+        break;
+    }
     
-    // Add physics body for south wall
-    this.physicsWorld.addBox(
-      new THREE.Vector3(arenaSize, wallHeight, wallThickness),
-      southWall.position,
-      0 // Static body
-    );
+    // Add wall segments to the scene
+    wallSegment1.receiveShadow = true;
+    wallSegment1.castShadow = true;
+    this.scene.add(wallSegment1);
+    this.walls.push(wallSegment1);
     
-    // East wall
-    const eastWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, arenaSize);
-    const eastWall = new THREE.Mesh(eastWallGeometry, wallMaterial);
-    eastWall.position.set(arenaSize / 2, wallHeight / 2, 0);
-    eastWall.receiveShadow = true;
-    eastWall.castShadow = true;
-    this.scene.add(eastWall);
-    this.walls.push(eastWall);
+    wallSegment2.receiveShadow = true;
+    wallSegment2.castShadow = true;
+    this.scene.add(wallSegment2);
+    this.walls.push(wallSegment2);
     
-    // Add physics body for east wall
-    this.physicsWorld.addBox(
-      new THREE.Vector3(wallThickness, wallHeight, arenaSize),
-      eastWall.position,
-      0 // Static body
-    );
+    // Add physics bodies for wall segments
+    let size: THREE.Vector3;
     
-    // West wall
-    const westWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, arenaSize);
-    const westWall = new THREE.Mesh(westWallGeometry, wallMaterial);
-    westWall.position.set(-arenaSize / 2, wallHeight / 2, 0);
-    westWall.receiveShadow = true;
-    westWall.castShadow = true;
-    this.scene.add(westWall);
-    this.walls.push(westWall);
+    if (side === 'north' || side === 'south') {
+      size = new THREE.Vector3(segmentSize, wallHeight, wallThickness);
+    } else {
+      size = new THREE.Vector3(wallThickness, wallHeight, segmentSize);
+    }
     
-    // Add physics body for west wall
-    this.physicsWorld.addBox(
-      new THREE.Vector3(wallThickness, wallHeight, arenaSize),
-      westWall.position,
-      0 // Static body
-    );
+    this.physicsWorld.addBox(size, wallSegment1.position, 0); // Static body
+    this.physicsWorld.addBox(size, wallSegment2.position, 0); // Static body
   }
   
   private createObstacles(): void {
@@ -177,9 +210,9 @@ export class Level {
   }
   
   private createSpawnPoints(): void {
-    // Create spawn points around the perimeter
+    // Create spawn points around the perimeter, aligned with the wall openings
     const arenaSize = 45; // Slightly smaller than the walls
-    const spawnDistance = arenaSize / 2;
+    const spawnDistance = arenaSize / 2 + 5; // Position outside the walls
     
     // Create spawn points in a circle around the perimeter
     const numSpawnPoints = 16;
@@ -190,6 +223,21 @@ export class Level {
       
       this.spawnPoints.push(new THREE.Vector3(x, 0, z));
     }
+    
+    // Add specific spawn points at the wall openings
+    const halfArenaSize = 50 / 2;
+    
+    // North opening
+    this.spawnPoints.push(new THREE.Vector3(0, 0, -halfArenaSize - 2));
+    
+    // South opening
+    this.spawnPoints.push(new THREE.Vector3(0, 0, halfArenaSize + 2));
+    
+    // East opening
+    this.spawnPoints.push(new THREE.Vector3(halfArenaSize + 2, 0, 0));
+    
+    // West opening
+    this.spawnPoints.push(new THREE.Vector3(-halfArenaSize - 2, 0, 0));
   }
   
   public getSpawnPoints(): THREE.Vector3[] {

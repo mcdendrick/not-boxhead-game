@@ -1,16 +1,23 @@
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { Player } from '../entities/Player';
+import { Game } from './Game';
 
 export class InputManager {
   private controls: PointerLockControls;
   private player: Player;
+  private game: Game;
   
   private keys: { [key: string]: boolean } = {};
   private mouseButtons: { [button: number]: boolean } = {};
   
-  constructor(controls: PointerLockControls, player: Player) {
+  // Track last pause press time to prevent multiple toggles
+  private lastPauseTime: number = 0;
+  private readonly PAUSE_COOLDOWN: number = 300; // ms
+  
+  constructor(controls: PointerLockControls, player: Player, game: Game) {
     this.controls = controls;
     this.player = player;
+    this.game = game;
     
     // Set up event listeners
     document.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -63,6 +70,16 @@ export class InputManager {
     if (event.code === 'KeyR') {
       console.log('Reloading weapon');
       this.player.reload();
+    }
+    
+    // Handle pause
+    if (event.code === 'KeyP') {
+      const currentTime = Date.now();
+      if (currentTime - this.lastPauseTime > this.PAUSE_COOLDOWN) {
+        console.log('Toggling pause');
+        this.game.togglePause();
+        this.lastPauseTime = currentTime;
+      }
     }
   }
   
