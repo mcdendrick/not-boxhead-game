@@ -1,0 +1,102 @@
+Game Specification: "Not Boxhead" - 3D First-Person Zombie Shooter with Three.js
+"Not Boxhead" will be a 3D first-person shooter where players fight against waves of zombies in enclosed arenas. 
+The game will maintain the core mechanics of the original Boxhead series but with modern 3D graphics and first-person perspective.
+
+Technical Stack
+Frontend Framework: Three.js for 3D rendering
+Physics: Cannon.js or Ammo.js for physics calculations
+Audio: Howler.js for sound management
+Build System: Vite or Webpack for bundling
+Language: JavaScript/TypeScript
+Deployment: Web-based (playable in modern browsers)
+
+
+Advantages of Using Three.js
+Web-based: No downloads required, playable directly in browser
+Open Source: Complete control over the codebase
+Lightweight: Faster loading times compared to Unity WebGL exports
+Cross-platform: Works on any device with a modern browser
+Direct Code Access: No black-box engine components
+Active Community: Large community with many resources and examples
+
+Revised Development Roadmap
+
+Phase 1: Project Setup and Basic Environment (2-3 weeks)
+
+Week 1: Project Initialization
+Set up development environment with Vite/Webpack
+Initialize Three.js project with basic scene
+Implement first-person camera controls
+Create simple test environment with basic lighting
+
+Week 2-3: Core Movement and Physics
+Implement player movement with collision detection
+Set up physics system using Cannon.js
+Create basic level geometry with collision meshes
+Implement jumping and gravity
+
+
+Phase 2: Combat and Enemy Systems (4 weeks)
+
+Week 4-5: Weapon System
+Create weapon models and animations
+Implement shooting mechanics with raycasting
+Add visual effects for muzzle flash and impacts
+Implement weapon switching and ammo system
+
+Week 6-7: Enemy Implementation
+Create zombie models and animations
+Implement basic AI with pathfinding (using NavMesh or custom solution)
+Add different zombie types with unique behaviors
+Implement enemy spawning and wave system
+
+
+Phase 3: Game Systems and UI (3 weeks)
+
+Week 8-9: Game Mechanics
+Implement health system and damage
+Create power-up system with pickups
+Add score tracking and wave progression
+Implement game state management (menu, playing, game over)
+
+Week 10: User Interface
+Design and implement HUD elements using HTML/CSS overlay or WebGL
+Create menu screens
+Add visual feedback for player damage and healing
+Implement score display and wave counter
+
+
+Phase 4: Polish and Optimization (3 weeks)
+
+Week 11: Audio Implementation
+Add sound effects using Howler.js
+Implement dynamic music system
+Create audio manager for handling multiple sounds
+
+Week 12-13: Performance Optimization and Testing
+Implement level of detail (LOD) for models
+Optimize rendering with techniques like frustum culling
+Add loading screens and asset management
+Cross-browser testing and bug fixes
+
+
+Phase 5: Deployment and Additional Features (2+ weeks)
+
+Week 14: Deployment
+Set up hosting and deployment pipeline
+Implement analytics for gameplay data
+Create landing page for the game
+
+
+Future Enhancements
+Additional maps and environments
+More enemy types and weapons
+Local storage for saving high scores
+Potential multiplayer implementation using WebRTC or WebSockets
+
+Getting Started with Three.js Implementation
+To begin development, I recommend the following steps:
+Set up a basic project structure with Vite/Webpack
+Create a simple Three.js scene with first-person controls
+Implement basic movement and collision detection
+Add simple placeholder models for testing

@@ -1,0 +1,30 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Not Boxhead Game Development Rules
+
+## File Management
+- Read all files in a directory before making changes
+- Keep track of dependencies between files to understand the impact of changes
+- Document the purpose of each file in comments at the top
+
+## Error Resolution
+- Fix one linter error at a time
+- Make sure all linter errors are taken care of
+- Group related errors when they have a common cause
+
+## Code Organization
+- Maintain consistent naming conventions across all files
+- Keep class methods organized by functionality (constructor, getters/setters, core logic, etc.)
+- Use proper TypeScript typing for all variables and function returns
+
+
+## Implementation Strategy
+- Ensure backward compatibility when extending existing classes
+
+## Documentation
+- Document public methods with clear descriptions
+- Add TODO comments for future improvements
+- Include examples for complex logic
