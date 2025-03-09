@@ -11,7 +11,10 @@ export abstract class Weapon {
   protected currentAmmo: number;
   protected totalAmmo: number;
   protected isReloading: boolean = false;
+  protected reloadStartTime: number = 0;
   protected lastFireTime: number = 0;
+  protected lastEmptySoundTime: number = 0; // Track when we last played the empty sound
+  protected readonly EMPTY_SOUND_COOLDOWN: number = 500; // 500ms cooldown for empty sound
   
   protected audioManager: AudioManager | null = null;
   protected model: THREE.Group | null = null;
@@ -36,7 +39,18 @@ export abstract class Weapon {
     // Check if can shoot
     if (this.isReloading) return false;
     if (this.currentAmmo <= 0) {
-      this.playEmptySound();
+      // Only play empty sound if we haven't played it recently
+      const now = Date.now();
+      if (now - this.lastEmptySoundTime > this.EMPTY_SOUND_COOLDOWN) {
+        this.playEmptySound();
+        this.lastEmptySoundTime = now;
+      }
+      
+      // Auto-reload if the player has reserve ammo
+      if (this.totalAmmo > 0) {
+        this.reload();
+      }
+      
       return false;
     }
     
@@ -68,6 +82,7 @@ export abstract class Weapon {
     }
     
     this.isReloading = true;
+    this.reloadStartTime = Date.now();
     this.playReloadSound();
     
     // Reload after delay
@@ -116,11 +131,30 @@ export abstract class Weapon {
     this.currentAmmo = this.magazineSize;
     this.isReloading = false;
     this.lastFireTime = 0;
+    this.lastEmptySoundTime = 0;
+  }
+  
+  public getReloadProgress(): number {
+    if (!this.isReloading) return 0;
+    
+    const elapsed = (Date.now() - this.reloadStartTime) / 1000;
+    return Math.min(elapsed / this.reloadTime, 1);
   }
   
   protected playShootSound(): void {
     if (this.audioManager) {
-      this.audioManager.playSound(this.getShootSoundName());
+      const soundName = this.getShootSoundName();
+      
+      // Check if this is an automatic weapon based on fire rate
+      // Automatic weapons have high fire rates (>= 8 shots per second)
+      if (this.fireRate >= 8) {
+        // Create a new instance of the sound each time for automatic weapons
+        // This allows multiple instances to overlap naturally
+        this.audioManager.playSoundInstance(soundName);
+      } else {
+        // For non-automatic weapons, use the standard approach
+        this.audioManager.playSound(soundName);
+      }
     }
   }
   

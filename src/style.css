@@ -203,3 +203,19 @@ body, html {
 .hidden {
   display: none !important;
 }
+
+/* Add animation for wave change */
+@keyframes wave-change {
+  0% {
+    transform: scale(1);
+    color: var(--text-color);
+  }
+  50% {
+    transform: scale(1.5);
+    color: var(--primary-color);
+  }
+  100% {
+    transform: scale(1);
+    color: var(--text-color);
+  }
+}

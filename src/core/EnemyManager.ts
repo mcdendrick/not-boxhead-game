@@ -124,7 +124,11 @@ export class EnemyManager {
   }
   
   public isWaveComplete(): boolean {
-    return !this.isSpawning && this.enemies.length === 0;
+    // A wave is complete when:
+    // 1. We're not currently spawning enemies
+    // 2. There are no enemies left
+    // 3. We have actually started a wave (currentWave > 0)
+    return !this.isSpawning && this.enemies.length === 0 && this.currentWave > 0;
   }
   
   public getEnemies(): Enemy[] {

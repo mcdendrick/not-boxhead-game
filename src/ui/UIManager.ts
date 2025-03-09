@@ -17,6 +17,9 @@ export class UIManager {
     this.scoreDisplay = document.getElementById('score-display');
     this.weaponName = document.getElementById('weapon-name');
     
+    // Create or update UI elements if they don't exist
+    this.createOrUpdateUIElements();
+    
     // Create invulnerability indicator
     this.createInvulnerabilityIndicator();
     
@@ -25,6 +28,111 @@ export class UIManager {
     
     // Add keyboard shortcut hints
     this.addKeyboardShortcutHints();
+  }
+  
+  private createOrUpdateUIElements(): void {
+    const gameUI = document.getElementById('game-ui');
+    if (!gameUI) return;
+    
+    // Create weapon info container if it doesn't exist
+    if (!this.weaponName || !this.ammoCounter) {
+      // Remove old elements if they exist
+      if (this.weaponName) this.weaponName.remove();
+      if (this.ammoCounter) this.ammoCounter.remove();
+      
+      // Create weapon info container
+      const weaponInfoContainer = document.createElement('div');
+      weaponInfoContainer.className = 'weapon-info';
+      weaponInfoContainer.style.position = 'absolute';
+      weaponInfoContainer.style.bottom = '20px';
+      weaponInfoContainer.style.right = '20px';
+      weaponInfoContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+      weaponInfoContainer.style.padding = '10px 15px';
+      weaponInfoContainer.style.borderRadius = '5px';
+      weaponInfoContainer.style.color = 'white';
+      weaponInfoContainer.style.fontFamily = 'monospace';
+      weaponInfoContainer.style.zIndex = '10';
+      weaponInfoContainer.style.display = 'flex';
+      weaponInfoContainer.style.flexDirection = 'column';
+      weaponInfoContainer.style.alignItems = 'flex-end';
+      
+      // Create weapon name element
+      this.weaponName = document.createElement('div');
+      this.weaponName.id = 'weapon-name';
+      this.weaponName.style.fontSize = '18px';
+      this.weaponName.style.fontWeight = 'bold';
+      this.weaponName.style.marginBottom = '5px';
+      this.weaponName.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.8)';
+      weaponInfoContainer.appendChild(this.weaponName);
+      
+      // Create ammo counter element
+      this.ammoCounter = document.createElement('div');
+      this.ammoCounter.id = 'ammo-counter';
+      this.ammoCounter.style.fontSize = '16px';
+      this.ammoCounter.style.fontWeight = 'bold';
+      weaponInfoContainer.appendChild(this.ammoCounter);
+      
+      // Add to game UI
+      gameUI.appendChild(weaponInfoContainer);
+    }
+    
+    // Create health bar if it doesn't exist
+    if (!this.healthBar || !this.healthFill) {
+      // Remove old elements if they exist
+      if (this.healthBar) this.healthBar.remove();
+      
+      // Create health bar container
+      const healthBarContainer = document.createElement('div');
+      healthBarContainer.className = 'health-bar-container';
+      healthBarContainer.style.position = 'absolute';
+      healthBarContainer.style.top = '20px';
+      healthBarContainer.style.left = '20px';
+      healthBarContainer.style.zIndex = '10';
+      
+      // Create health bar
+      this.healthBar = document.createElement('div');
+      this.healthBar.id = 'health-bar';
+      this.healthBar.style.width = '200px';
+      this.healthBar.style.height = '20px';
+      this.healthBar.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+      this.healthBar.style.borderRadius = '5px';
+      this.healthBar.style.overflow = 'hidden';
+      this.healthBar.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+      
+      // Create health fill
+      this.healthFill = document.createElement('div');
+      this.healthFill.className = 'health-fill';
+      this.healthFill.style.width = '100%';
+      this.healthFill.style.height = '100%';
+      this.healthFill.style.backgroundColor = 'var(--health-color, #4CAF50)';
+      this.healthFill.style.transition = 'width 0.3s ease, background-color 0.3s ease';
+      
+      // Add health text
+      const healthText = document.createElement('div');
+      healthText.className = 'health-text';
+      healthText.style.position = 'absolute';
+      healthText.style.top = '0';
+      healthText.style.left = '0';
+      healthText.style.width = '100%';
+      healthText.style.height = '100%';
+      healthText.style.display = 'flex';
+      healthText.style.alignItems = 'center';
+      healthText.style.justifyContent = 'center';
+      healthText.style.color = 'white';
+      healthText.style.fontFamily = 'monospace';
+      healthText.style.fontSize = '12px';
+      healthText.style.fontWeight = 'bold';
+      healthText.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.8)';
+      healthText.textContent = '100 HP';
+      
+      // Assemble health bar
+      this.healthBar.appendChild(this.healthFill);
+      this.healthBar.appendChild(healthText);
+      healthBarContainer.appendChild(this.healthBar);
+      
+      // Add to game UI
+      gameUI.appendChild(healthBarContainer);
+    }
   }
   
   private createInvulnerabilityIndicator(): void {
@@ -154,57 +262,205 @@ export class UIManager {
     const hintsContainer = document.createElement('div');
     hintsContainer.className = 'keyboard-hints';
     hintsContainer.style.position = 'absolute';
-    hintsContainer.style.bottom = '10px';
-    hintsContainer.style.right = '10px';
-    hintsContainer.style.color = 'rgba(255, 255, 255, 0.7)';
-    hintsContainer.style.fontSize = '12px';
-    hintsContainer.style.textAlign = 'right';
+    hintsContainer.style.bottom = '20px';
+    hintsContainer.style.left = '50%';
+    hintsContainer.style.transform = 'translateX(-50%)';
+    hintsContainer.style.display = 'flex';
+    hintsContainer.style.gap = '15px';
+    hintsContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    hintsContainer.style.padding = '8px 15px';
+    hintsContainer.style.borderRadius = '5px';
+    hintsContainer.style.color = 'rgba(255, 255, 255, 0.9)';
+    hintsContainer.style.fontSize = '14px';
     hintsContainer.style.fontFamily = 'monospace';
+    hintsContainer.style.zIndex = '10';
+    hintsContainer.style.transition = 'opacity 0.5s ease-out';
     
-    // Add pause hint
-    const pauseHint = document.createElement('div');
-    pauseHint.textContent = 'Press [P] to Pause';
-    pauseHint.style.marginBottom = '5px';
-    hintsContainer.appendChild(pauseHint);
+    // Create hint items with better styling
+    const createHint = (key: string, action: string) => {
+      const hintItem = document.createElement('div');
+      hintItem.style.display = 'flex';
+      hintItem.style.alignItems = 'center';
+      
+      const keyElement = document.createElement('span');
+      keyElement.textContent = key;
+      keyElement.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+      keyElement.style.padding = '3px 6px';
+      keyElement.style.borderRadius = '3px';
+      keyElement.style.marginRight = '5px';
+      keyElement.style.fontWeight = 'bold';
+      
+      const actionElement = document.createElement('span');
+      actionElement.textContent = action;
+      
+      hintItem.appendChild(keyElement);
+      hintItem.appendChild(actionElement);
+      
+      return hintItem;
+    };
     
-    // Add other hints
-    const reloadHint = document.createElement('div');
-    reloadHint.textContent = 'Press [R] to Reload';
-    reloadHint.style.marginBottom = '5px';
-    hintsContainer.appendChild(reloadHint);
-    
-    const weaponHint = document.createElement('div');
-    weaponHint.textContent = 'Press [1-5] to Switch Weapons';
-    hintsContainer.appendChild(weaponHint);
+    // Add hints with better styling
+    hintsContainer.appendChild(createHint('R', 'Reload'));
+    hintsContainer.appendChild(createHint('P', 'Pause'));
+    hintsContainer.appendChild(createHint('1-5', 'Switch Weapons'));
     
     // Add to game UI
     gameUI.appendChild(hintsContainer);
+    
+    // Store the hints container for later use
+    (this as any).hintsContainer = hintsContainer;
+    
+    // Make the hints fade out after a few seconds
+    setTimeout(() => {
+      hintsContainer.style.opacity = '0';
+      
+      // After fade out, set display to none
+      setTimeout(() => {
+        hintsContainer.style.display = 'none';
+      }, 500);
+    }, 5000); // Hide after 5 seconds
   }
   
   public updateHealth(health: number): void {
-    if (this.healthFill) {
+    if (this.healthFill && this.healthBar) {
       // Update health bar width
       const healthPercent = Math.max(0, Math.min(100, health));
       this.healthFill.style.width = `${healthPercent}%`;
       
       // Change color based on health
       if (healthPercent < 25) {
-        this.healthFill.style.backgroundColor = 'var(--health-low-color)';
+        this.healthFill.style.backgroundColor = 'var(--health-low-color, #f44336)'; // Red
+        
+        // Add pulsing effect for very low health
+        if (healthPercent < 15) {
+          this.healthFill.style.animation = 'pulse-health 1s infinite alternate';
+          
+          // Add the keyframes if they don't exist
+          if (!document.querySelector('#health-pulse-keyframes')) {
+            const style = document.createElement('style');
+            style.id = 'health-pulse-keyframes';
+            style.textContent = `
+              @keyframes pulse-health {
+                from { background-color: #f44336; }
+                to { background-color: #ff7043; }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+        } else {
+          this.healthFill.style.animation = '';
+        }
+      } else if (healthPercent < 50) {
+        this.healthFill.style.backgroundColor = 'var(--health-medium-color, #ff9800)'; // Orange
+        this.healthFill.style.animation = '';
       } else {
-        this.healthFill.style.backgroundColor = 'var(--health-color)';
+        this.healthFill.style.backgroundColor = 'var(--health-color, #4CAF50)'; // Green
+        this.healthFill.style.animation = '';
+      }
+      
+      // Update health text
+      const healthText = this.healthBar.querySelector('.health-text');
+      if (healthText) {
+        healthText.textContent = `${Math.floor(health)} HP`;
       }
     }
   }
   
-  public updateAmmo(currentAmmo: number, totalAmmo: number): void {
+  public updateAmmo(currentAmmo: number, totalAmmo: number, isReloading: boolean = false, reloadProgress: number = 0): void {
     if (this.ammoCounter) {
-      this.ammoCounter.textContent = `${currentAmmo} / ${totalAmmo}`;
+      // Show reloading text if the player is reloading
+      if (isReloading) {
+        // Show reload progress
+        const progressPercent = Math.floor(reloadProgress * 100);
+        const progressBars = Math.floor(progressPercent / 10); // 0-10 bars
+        const progressBar = '█'.repeat(progressBars) + '░'.repeat(10 - progressBars);
+        
+        this.ammoCounter.innerHTML = `RELOADING ${progressBar} ${progressPercent}%`;
+        this.ammoCounter.style.color = 'yellow';
+      } else {
+        // Change display based on ammo level
+        if (currentAmmo === 0 && totalAmmo > 0) {
+          // Out of ammo but has reserve ammo - show reload prompt
+          this.ammoCounter.innerHTML = '<span style="color: red; font-weight: bold;">PRESS R TO RELOAD</span>';
+          this.ammoCounter.style.animation = 'flash 1s infinite';
+          
+          // Add the keyframes if they don't exist
+          this.ensureFlashKeyframesExist();
+        } else {
+          // Normal ammo display with bullet icons
+          const bulletIcon = '•'; // Bullet character
+          const emptyIcon = '◦'; // Empty bullet character
+          
+          // Create visual representation of magazine
+          let magazineVisual = '';
+          
+          // For weapons with large magazines, use a more compact representation
+          if (currentAmmo + totalAmmo > 30) {
+            // Just show the numbers with a better format
+            magazineVisual = `<span style="font-weight: bold;">${currentAmmo}</span> / ${totalAmmo}`;
+          } else {
+            // For smaller magazines, show bullet icons
+            const bulletIcons = bulletIcon.repeat(currentAmmo);
+            magazineVisual = `<span style="letter-spacing: 2px;">${bulletIcons}</span> [${currentAmmo}/${totalAmmo}]`;
+          }
+          
+          this.ammoCounter.innerHTML = magazineVisual;
+          
+          // Change color based on ammo level
+          if (currentAmmo === 0) {
+            // No ammo
+            this.ammoCounter.style.color = 'red';
+          } else if (currentAmmo <= 5) {
+            // Low ammo
+            this.ammoCounter.style.color = 'orange';
+            
+            // Flash the text for very low ammo
+            if (currentAmmo <= 3) {
+              this.ammoCounter.style.animation = 'flash 1s infinite';
+              this.ensureFlashKeyframesExist();
+            } else {
+              this.ammoCounter.style.animation = '';
+            }
+          } else {
+            // Normal ammo level
+            this.ammoCounter.style.color = 'white';
+            this.ammoCounter.style.animation = '';
+          }
+        }
+      }
+    }
+  }
+  
+  private ensureFlashKeyframesExist(): void {
+    // Add the keyframes if they don't exist
+    if (!document.querySelector('#ammo-flash-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'ammo-flash-keyframes';
+      style.textContent = `
+        @keyframes flash {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
     }
   }
   
   public updateWave(wave: number): void {
     if (this.waveCounter) {
+      // Add a visual effect for wave change
       this.waveCounter.textContent = `Wave: ${wave}`;
+      
+      // Add a brief animation to highlight the wave change
+      this.waveCounter.style.animation = 'wave-change 1s ease-in-out';
+      
+      // Remove the animation after it completes
+      setTimeout(() => {
+        if (this.waveCounter) {
+          this.waveCounter.style.animation = '';
+        }
+      }, 1000);
     }
   }
   
@@ -355,6 +611,26 @@ export class UIManager {
       const overlay = (this.pauseMenu as any).overlay;
       if (overlay) {
         overlay.style.display = show ? 'block' : 'none';
+      }
+      
+      // Show/hide the keyboard hints when paused
+      const hintsContainer = (this as any).hintsContainer;
+      if (hintsContainer) {
+        if (show) {
+          // Show hints when paused
+          hintsContainer.style.display = 'flex';
+          // Use setTimeout to ensure the display change takes effect before changing opacity
+          setTimeout(() => {
+            hintsContainer.style.opacity = '1';
+          }, 10);
+        } else {
+          // Hide hints when unpaused
+          hintsContainer.style.opacity = '0';
+          // After fade out, set display to none
+          setTimeout(() => {
+            hintsContainer.style.display = 'none';
+          }, 500);
+        }
       }
     }
   }

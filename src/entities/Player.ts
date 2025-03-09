@@ -9,6 +9,7 @@ import { RocketLauncher } from '../weapons/RocketLauncher';
 import { Minigun } from '../weapons/Minigun';
 import { WeaponManager } from '../weapons/WeaponManager';
 import * as CANNON from 'cannon-es';
+import { AudioManager } from '../audio/AudioManager';
 
 export class Player {
   private controls: PointerLockControls;
@@ -33,6 +34,12 @@ export class Player {
   private invulnerable: boolean = false;
   private invulnerabilityTimer: number = 0;
   private readonly INVULNERABILITY_DURATION: number = 1.5; // Increased from 1.0 to 1.5 seconds
+  
+  // Sound effects timing
+  private lastFootstepTime: number = 0;
+  private readonly FOOTSTEP_INTERVAL: number = 500; // Increased from 350ms to 500ms between footstep sounds
+  private wasInAir: boolean = false; // Track if player was in the air last frame
+  private audioManager: AudioManager | null = null;
   
   private weapons: Weapon[] = [];
   private currentWeaponIndex: number = 0;
@@ -129,14 +136,39 @@ export class Player {
       this.direction.sub(cameraRight);
     }
     
+    // Check if player is moving
+    const isMoving = this.direction.lengthSq() > 0;
+    
+    // If not moving, stop any footstep sounds
+    if (!isMoving) {
+      this.stopFootstepSounds();
+    }
+    
     // Normalize direction if moving
-    if (this.direction.lengthSq() > 0) {
+    if (isMoving) {
       this.direction.normalize();
       
       // Apply movement speed
       this.velocity.x = this.direction.x * speed * deltaTime;
       this.velocity.z = this.direction.z * speed * deltaTime;
+      
+      // Calculate actual movement speed (magnitude of horizontal velocity)
+      const movementSpeed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
+      
+      // Only play footstep sounds if we're actually moving at a reasonable speed and on the ground
+      if (this.canJump && movementSpeed > 0.01) {
+        const now = Date.now();
+        // Adjust footstep interval based on movement speed (faster when sprinting)
+        const currentFootstepInterval = this.isSprinting ? this.FOOTSTEP_INTERVAL * 0.7 : this.FOOTSTEP_INTERVAL;
+        if (now - this.lastFootstepTime > currentFootstepInterval) {
+          this.playFootstepSound();
+          this.lastFootstepTime = now;
+        }
+      }
     }
+    
+    // Check if player is in the air
+    const isInAir = !this.canJump;
     
     // Apply gravity
     this.velocity.y -= 9.8 * deltaTime;
@@ -153,8 +185,17 @@ export class Player {
     if (this.controls.getObject().position.y < this.PLAYER_HEIGHT) {
       this.velocity.y = 0;
       this.controls.getObject().position.y = this.PLAYER_HEIGHT;
+      
+      // If player was in the air and is now on the ground, play landing sound
+      if (isInAir) {
+        this.playLandingSound();
+      }
+      
       this.canJump = true;
     }
+    
+    // Update wasInAir state for next frame
+    this.wasInAir = isInAir;
     
     // Check for wall collisions
     this.checkWallCollisions(previousPosition);
@@ -255,15 +296,32 @@ export class Player {
   }
   
   public setMovement(forward: boolean, backward: boolean, left: boolean, right: boolean, jump: boolean, sprint: boolean): void {
+    // Check if player was moving before and is now stopping
+    const wasMoving = this.moveForward || this.moveBackward || this.moveLeft || this.moveRight;
+    const willBeMoving = forward || backward || left || right;
+    
+    // Update movement state
     this.moveForward = forward;
     this.moveBackward = backward;
     this.moveLeft = left;
     this.moveRight = right;
     this.isSprinting = sprint;
     
+    // If player was moving but is now stopping, stop footstep sounds
+    if (wasMoving && !willBeMoving) {
+      this.stopFootstepSounds();
+    }
+    
+    // If player is starting to move, reset the footstep timer with a small delay
+    // This prevents the first footstep from playing immediately when movement starts
+    if (!wasMoving && willBeMoving) {
+      this.lastFootstepTime = Date.now() + 100; // Add a small delay before the first footstep
+    }
+    
     if (jump && this.canJump) {
       this.velocity.y = this.JUMP_FORCE;
       this.canJump = false;
+      this.playJumpSound();
     }
   }
   
@@ -281,6 +339,7 @@ export class Player {
   
   public shoot(): void {
     if (this.weaponManager) {
+      // Call the weaponManager's shoot method
       this.weaponManager.shoot();
     } else if (this.weapons.length > 0) {
       // Fallback to direct weapon usage if weaponManager not set
@@ -289,7 +348,11 @@ export class Player {
   }
   
   public reload(): void {
-    if (this.weapons.length > 0) {
+    if (this.weaponManager) {
+      // Use the WeaponManager to reload
+      this.weaponManager.reload();
+    } else if (this.weapons.length > 0) {
+      // Fallback to direct weapon usage if weaponManager not set
       this.weapons[this.currentWeaponIndex].reload();
     }
   }
@@ -447,5 +510,61 @@ export class Player {
   
   public isInvulnerable(): boolean {
     return this.invulnerable;
+  }
+  
+  public setAudioManager(audioManager: AudioManager): void {
+    this.audioManager = audioManager;
+  }
+  
+  private playJumpSound(): void {
+    if (this.audioManager) {
+      this.audioManager.playSound('playerJump');
+    }
+  }
+  
+  private playLandingSound(): void {
+    if (this.audioManager) {
+      this.audioManager.playSound('playerLand');
+    }
+  }
+  
+  private playFootstepSound(): void {
+    if (this.audioManager) {
+      // Only play footstep sounds if we're actually moving and on the ground
+      if (this.direction.lengthSq() > 0 && this.canJump) {
+        // Add slight randomization to the rate to make footsteps sound more natural
+        const sound = this.audioManager.getSound('footstep');
+        if (sound) {
+          // Randomize the playback rate slightly (0.9 to 1.1) for more natural footstep sounds
+          const randomRate = 0.9 + Math.random() * 0.2;
+          sound.rate(randomRate);
+          
+          // Play the sound with a short duration to prevent overlap
+          const soundId = sound.play();
+          
+          // Set a timeout to stop the sound if it's still playing after a short duration
+          if (soundId) {
+            setTimeout(() => {
+              if (sound.playing(soundId)) {
+                sound.stop(soundId);
+              }
+            }, 300); // Stop after 300ms to prevent sounds from lingering
+          }
+        } else {
+          // Fallback to the regular method if we can't get the sound directly
+          this.audioManager.playSoundInstance('footstep');
+        }
+      }
+    }
+  }
+  
+  private stopFootstepSounds(): void {
+    if (this.audioManager) {
+      const footstepSound = this.audioManager.getSound('footstep');
+      if (footstepSound) {
+        // Stop all instances of footstep sounds
+        footstepSound.stop();
+      }
+    }
   }
 } 

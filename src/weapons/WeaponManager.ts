@@ -304,7 +304,57 @@ export class WeaponManager {
   public reload(): void {
     if (this.weapons.length === 0) return;
     
-    this.weapons[this.currentWeaponIndex].reload();
+    const currentWeapon = this.weapons[this.currentWeaponIndex];
+    
+    // Try to reload
+    if (currentWeapon.reload()) {
+      // Add a reload animation to the weapon model
+      this.playReloadAnimation();
+    }
+  }
+  
+  private playReloadAnimation(): void {
+    if (!this.weaponModel) return;
+    
+    // Save the original position and rotation
+    const originalPosition = this.weaponModel.position.clone();
+    const originalRotation = this.weaponModel.rotation.clone();
+    
+    // Create a simple reload animation
+    const duration = 500; // milliseconds
+    const startTime = Date.now();
+    
+    const animate = () => {
+      if (!this.weaponModel) return; // Check if weaponModel still exists
+      
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Move the weapon down and rotate it slightly during reload
+      if (progress < 0.5) {
+        // First half of animation: move down and rotate
+        const t = progress * 2; // 0 to 1 during first half
+        this.weaponModel.position.y = originalPosition.y - 0.1 * t;
+        this.weaponModel.rotation.x = originalRotation.x + 0.2 * t;
+      } else {
+        // Second half of animation: move back up and rotate back
+        const t = (progress - 0.5) * 2; // 0 to 1 during second half
+        this.weaponModel.position.y = originalPosition.y - 0.1 * (1 - t);
+        this.weaponModel.rotation.x = originalRotation.x + 0.2 * (1 - t);
+      }
+      
+      // Continue animation if not complete
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else if (this.weaponModel) {
+        // Reset to original position and rotation when done
+        this.weaponModel.position.copy(originalPosition);
+        this.weaponModel.rotation.copy(originalRotation);
+      }
+    };
+    
+    // Start the animation
+    animate();
   }
   
   public switchWeapon(direction: number): void {
@@ -601,5 +651,9 @@ export class WeaponManager {
     group.add(frontGrip);
     
     return group as unknown as THREE.Mesh;
+  }
+  
+  public stopShooting(): void {
+    // No need to do anything here, as the Player class handles the shooting state
   }
 } 

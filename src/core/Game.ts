@@ -32,6 +32,7 @@ export class Game {
   private isPaused: boolean = false;
   private score: number = 0;
   private currentWave: number = 1;
+  private isWaveTransitioning: boolean = false;
   
   constructor() {
     // Initialize Three.js components
@@ -77,6 +78,12 @@ export class Game {
     
     // Initialize player
     this.player = new Player(this.controls, this.camera, this.physicsWorld);
+    
+    // Initialize audio manager
+    this.audioManager = new AudioManager();
+    
+    // Set audio manager for player
+    this.player.setAudioManager(this.audioManager);
     
     // Initialize weapon manager and connect to player
     this.weaponManager = new WeaponManager(this.scene, this.camera, this.audioManager);
@@ -188,6 +195,7 @@ export class Game {
     // Reset game state
     this.score = 0;
     this.currentWave = 1;
+    this.isWaveTransitioning = false;
     
     // Reset UI
     this.uiManager.updateScore(this.score);
@@ -322,14 +330,29 @@ export class Game {
     this.checkCollisions();
     
     // Check wave completion
-    if (this.enemyManager.isWaveComplete()) {
+    if (this.enemyManager.isWaveComplete() && !this.isWaveTransitioning) {
+      // Set the flag to prevent multiple wave completions
+      this.isWaveTransitioning = true;
+      
       this.currentWave++;
       this.uiManager.updateWave(this.currentWave);
-      this.enemyManager.startWave(this.currentWave);
+      
+      // Play wave completion sound
       this.audioManager.playSound('waveComplete');
       
-      // Unlock weapons based on wave progression
-      this.checkWeaponUnlocks();
+      // Show wave completion message
+      this.uiManager.showMessage(`Wave ${this.currentWave - 1} Complete!`, 3000);
+      
+      // Start the next wave after a short delay
+      setTimeout(() => {
+        this.enemyManager.startWave(this.currentWave);
+        
+        // Unlock weapons based on wave progression
+        this.checkWeaponUnlocks();
+        
+        // Reset the flag after the new wave has started
+        this.isWaveTransitioning = false;
+      }, 2000);
     }
     
     // Check player health
@@ -339,8 +362,15 @@ export class Game {
     
     // Update UI
     this.uiManager.updateHealth(this.player.getHealth());
-    this.uiManager.updateAmmo(this.weaponManager.getCurrentAmmo(), this.weaponManager.getTotalAmmo());
-    this.uiManager.updateWeaponName(this.weaponManager.getCurrentWeapon().getName());
+    
+    const currentWeapon = this.weaponManager.getCurrentWeapon();
+    this.uiManager.updateAmmo(
+      this.weaponManager.getCurrentAmmo(), 
+      this.weaponManager.getTotalAmmo(),
+      currentWeapon.isCurrentlyReloading(),
+      currentWeapon.getReloadProgress()
+    );
+    this.uiManager.updateWeaponName(currentWeapon.getName());
     
     // Show invulnerability indicator when player is invulnerable
     this.uiManager.showInvulnerabilityIndicator(this.player.isInvulnerable());

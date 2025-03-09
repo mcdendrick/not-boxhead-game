@@ -66,28 +66,30 @@ export class AudioManager {
     this.registerSound('rifleShot', './src/assets/audio/rifle-shots.wav', 0.7);
     this.registerSound('assaultRifleShot', './src/assets/audio/assault-rifle-shot.wav', 0.7);
     this.registerSound('reload', './src/assets/audio/reload.wav', 0.6);
+    this.registerSound('rocketShot', './src/assets/audio/rocket-launch.wav', 0.8);
+    this.registerSound('empty', './src/assets/audio/empty-gun.wav', 0.5); 
     
     // Player sounds
-    this.registerSound('playerJump', './src/assets/audio/jump.wav', 0.5); 
-    this.registerSound('playerLand', './src/assets/audio/landing-sound.wav', 0.5); 
-    this.registerSound('footstep', './src/assets/audio/running.wav', 0.4);
+    this.registerSound('playerJump', './src/assets/audio/jump.wav', 0.3); 
+    this.registerSound('playerLand', './src/assets/audio/landing-sound.wav', 0.1); 
+    this.registerSound('footstep', './src/assets/audio/running.wav', 0.1);
     
     // Enemy sounds
     this.registerSound('enemyDeath', './src/assets/audio/zombie-death.wav', 0.7);
     this.registerSound('enemySpawn', './src/assets/audio/zombie-growl.wav', 0.6);
+
+    // Stage sounds
+    this.registerSound('waveComplete', './src/assets/audio/zombie-growl.wav', 0.8); 
     
     // Fallback sounds for missing files - use existing sounds as substitutes
     this.registerSound('shotgunShot', './src/assets/audio/pistol-shot.wav', 0.8); // Use pistol sound as fallback
-    this.registerSound('rocketShot', './src/assets/audio/rifle-shots.wav', 0.8); // Use rifle sound as fallback
     this.registerSound('minigunShot', './src/assets/audio/assault-rifle-shot.wav', 0.6); // Use assault rifle sound as fallback
-    this.registerSound('empty', './src/assets/audio/landing-sound.wav', 0.5); // Use landing sound as fallback
     this.registerSound('weaponUnlock', './src/assets/audio/jump.wav', 0.8); // Use jump sound as fallback
     this.registerSound('playerDamage', './src/assets/audio/landing-sound.wav', 0.7); // Use landing sound as fallback
     this.registerSound('playerDeath', './src/assets/audio/zombie-death.wav', 0.8); // Use zombie death as fallback
-    this.registerSound('enemyHit', './src/assets/audio/landing-sound.wav', 0.6); // Use landing sound as fallback
+    this.registerSound('enemyHit', './src/assets/audio/landing-sound.wav', 0.2); // Use landing sound as fallback
     this.registerSound('enemyAttack', './src/assets/audio/zombie-growl.wav', 0.7); // Use zombie growl as fallback
     this.registerSound('gameOver', './src/assets/audio/zombie-death.wav', 0.8); // Use zombie death as fallback
-    this.registerSound('waveComplete', './src/assets/audio/jump.wav', 0.8); // Use jump sound as fallback
     this.registerSound('powerUp', './src/assets/audio/jump.wav', 0.7); // Use jump sound as fallback
     this.registerSound('explosion', './src/assets/audio/pistol-shot.wav', 0.8); // Use pistol sound as fallback
     
@@ -152,6 +154,27 @@ export class AudioManager {
     const sound = this.sounds.get(id);
     if (sound) {
       console.log(`Playing sound: ${id}`);
+      
+      // Special handling for certain sounds to prevent issues
+      if (id === 'empty') {
+        // For empty gun sound, stop any previous instances before playing
+        sound.howl.stop();
+      } else if (id === 'footstep') {
+        // For footstep sounds, stop any previous instances to prevent overlap
+        sound.howl.stop();
+        
+        // Set a shorter duration for footstep sounds
+        const soundId = sound.howl.play();
+        if (soundId) {
+          setTimeout(() => {
+            if (sound.howl.playing(soundId)) {
+              sound.howl.stop(soundId);
+            }
+          }, 300); // Stop after 300ms
+          return;
+        }
+      }
+      
       sound.howl.play();
     } else {
       console.warn(`Sound with id "${id}" not found.`);
@@ -224,6 +247,61 @@ export class AudioManager {
     // Update music volumes
     for (const [id, music] of this.music.entries()) {
       music.howl.volume(music.volume * this.musicVolume * this.masterVolume);
+    }
+  }
+  
+  public getSound(id: string): Howl | null {
+    const sound = this.sounds.get(id);
+    return sound ? sound.howl : null;
+  }
+  
+  public playSoundInstance(id: string): void {
+    if (this.isMuted) {
+      console.log(`Sound ${id} not played because audio is muted`);
+      return;
+    }
+    
+    const sound = this.sounds.get(id);
+    if (sound) {
+      console.log(`Playing sound instance: ${id}`);
+      // Play the sound
+      sound.howl.play();
+      
+      // Limit the number of concurrent instances of the same sound
+      // This prevents memory issues while still allowing enough overlap
+      this.limitConcurrentInstances(id, 5); // Allow up to 5 instances
+    } else {
+      console.warn(`Sound with id "${id}" not found.`);
+    }
+  }
+  
+  private limitConcurrentInstances(id: string, maxInstances: number): void {
+    const sound = this.sounds.get(id);
+    if (sound) {
+      // For footstep sounds, be more strict to prevent overwhelming repetition
+      const actualMaxInstances = id === 'footstep' ? 1 : maxInstances;
+      
+      // Get all currently playing instances
+      const playingIds = sound.howl.playing();
+      
+      // Check if we have multiple playing instances (playing() returns an array of IDs when multiple sounds are playing)
+      if (Array.isArray(playingIds) && playingIds.length > actualMaxInstances) {
+        // If there are too many instances, stop all but the newest one
+        // Sort IDs by creation time (lower ID = older)
+        playingIds.sort((a, b) => a - b);
+        
+        // For footstep sounds, stop ALL previous instances to ensure clean playback
+        if (id === 'footstep') {
+          for (let i = 0; i < playingIds.length - 1; i++) {
+            sound.howl.stop(playingIds[i]);
+          }
+        } else {
+          // For other sounds, keep the newest maxInstances
+          for (let i = 0; i < playingIds.length - actualMaxInstances; i++) {
+            sound.howl.stop(playingIds[i]);
+          }
+        }
+      }
     }
   }
 } 
